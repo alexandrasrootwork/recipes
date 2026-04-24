@@ -172,6 +172,13 @@
             font-style: italic;
         }
 
+        .recipe-images-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
         .recipe-image-preview {
             max-width: 80px;
             max-height: 80px;
@@ -256,12 +263,19 @@
             white-space: pre-wrap;
         }
 
+        .view-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
         .view-image {
-            max-width: 100%;
-            max-height: 300px;
-            margin: 10px 0;
+            max-width: 200px;
+            max-height: 200px;
             cursor: pointer;
             border: 1px solid #c0c0c0;
+            object-fit: cover;
         }
 
         /* Edit Modal */
@@ -312,6 +326,48 @@
 
         .modal-body textarea {
             resize: vertical;
+        }
+
+        .images-list-container {
+            border: 1px solid #808080;
+            background: #fff;
+            padding: 10px;
+            margin-bottom: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .image-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .image-item img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .image-item input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .remove-image-btn {
+            background: #c0c0c0;
+            border: 1px solid #000;
+            cursor: pointer;
+            padding: 2px 6px;
+            font-size: 11px;
+        }
+
+        .remove-image-btn:hover {
+            background: #ff0000;
+            color: white;
         }
 
         .retro-button {
@@ -450,10 +506,17 @@
             <textarea id="recipeDescription" placeholder="Short description..." rows="2"></textarea>
             <textarea id="recipeIngredients" placeholder="Ingredients (one per line)&#10;e.g.:&#10;2 cups flour&#10;1 cup sugar&#10;3 eggs" rows="5"></textarea>
             <textarea id="recipeInstructions" placeholder="Instructions (step by step)&#10;e.g.:&#10;1. Preheat oven to 350°F&#10;2. Mix dry ingredients&#10;3. Bake for 20 minutes" rows="6"></textarea>
-            <input type="text" id="recipeImage" placeholder="Image: images/photo.jpg or URL">
-            <div class="image-tip">
-                💡 <strong>Tip:</strong> Put images in your <strong>recipes/images/</strong> folder, then type: <strong>images/photo.jpg</strong>
+            
+            <div class="sidebar-title">🖼️ Photos (multiple)</div>
+            <div class="images-list-container" id="imagesListContainer"></div>
+            <div style="display: flex; gap: 8px;">
+                <button id="addImageBtn" class="retro-button add-image-btn">➕ Add Image URL</button>
             </div>
+            <div class="image-tip">
+                💡 <strong>Tip:</strong> Put images in your <strong>recipes/images/</strong> folder, then type: <strong>images/photo.jpg</strong><br>
+                Or use any image URL from the web.
+            </div>
+            
             <button id="saveRecipeBtn" class="retro-button">Save Recipe</button>
         </div>
     </div>
@@ -472,7 +535,7 @@
             <p><strong>✏️ Edit Recipe</strong> - Click Edit button on any recipe</p>
             <p><strong>🔍 Search</strong> - Filter by recipe name</p>
             <p><strong>📁 Categories</strong> - Click categories to filter</p>
-            <p><strong>🖼️ Photos</strong> - Add a photo for your dish</p>
+            <p><strong>🖼️ Multiple Photos</strong> - Add several photos to each recipe</p>
             <p><strong>💾 Export</strong> - Save all recipes as backup file</p>
             <button id="closeHelpBtn" class="retro-button">Got it</button>
         </div>
@@ -488,6 +551,7 @@
     let recipes = [];
     let currentFilter = { keyword: '', category: null };
     let editingRecipeId = null;
+    let currentImages = [];
 
     function loadRecipes() {
         const saved = localStorage.getItem('recipe_book');
@@ -495,8 +559,8 @@
             recipes = JSON.parse(saved);
         } else {
             recipes = [
-                { id: Date.now(), title: "Classic Chocolate Chip Cookies", category: "Dessert", description: "Soft, chewy, and full of chocolate chips!", ingredients: "2 1/4 cups all-purpose flour\n1 tsp baking soda\n1 tsp salt\n1 cup butter, softened\n3/4 cup sugar\n3/4 cup brown sugar\n1 tsp vanilla extract\n2 eggs\n2 cups chocolate chips", instructions: "1. Preheat oven to 375°F\n2. Mix flour, baking soda, and salt\n3. In separate bowl, cream butter and sugars\n4. Add eggs and vanilla\n5. Gradually add flour mixture\n6. Stir in chocolate chips\n7. Drop by spoonful onto baking sheet\n8. Bake 9-11 minutes", image: "" },
-                { id: Date.now()+1, title: "Perfect Pancakes", category: "Breakfast", description: "Fluffy homemade pancakes", ingredients: "1 1/2 cups flour\n3 1/2 tsp baking powder\n1 tsp salt\n1 tbsp sugar\n1 1/4 cups milk\n1 egg\n3 tbsp butter, melted", instructions: "1. Mix dry ingredients\n2. Add milk, egg, and melted butter\n3. Stir until combined\n4. Cook on greased griddle until bubbles form\n5. Flip and cook until golden", image: "" }
+                { id: Date.now(), title: "Classic Chocolate Chip Cookies", category: "Dessert", description: "Soft, chewy, and full of chocolate chips!", ingredients: "2 1/4 cups all-purpose flour\n1 tsp baking soda\n1 tsp salt\n1 cup butter, softened\n3/4 cup sugar\n3/4 cup brown sugar\n1 tsp vanilla extract\n2 eggs\n2 cups chocolate chips", instructions: "1. Preheat oven to 375°F\n2. Mix flour, baking soda, and salt\n3. In separate bowl, cream butter and sugars\n4. Add eggs and vanilla\n5. Gradually add flour mixture\n6. Stir in chocolate chips\n7. Drop by spoonful onto baking sheet\n8. Bake 9-11 minutes", images: [] },
+                { id: Date.now()+1, title: "Perfect Pancakes", category: "Breakfast", description: "Fluffy homemade pancakes", ingredients: "1 1/2 cups flour\n3 1/2 tsp baking powder\n1 tsp salt\n1 tbsp sugar\n1 1/4 cups milk\n1 egg\n3 tbsp butter, melted", instructions: "1. Mix dry ingredients\n2. Add milk, egg, and melted butter\n3. Stir until combined\n4. Cook on greased griddle until bubbles form\n5. Flip and cook until golden", images: [] }
             ];
         }
         renderFilters();
@@ -559,7 +623,12 @@
                     </div>
                 </div>
                 <div class="recipe-description-preview">${escapeHtml(recipe.description || '')}</div>
-                ${recipe.image ? `<img src="${getImagePath(recipe.image)}" class="recipe-image-preview" data-src="${getImagePath(recipe.image)}">` : ''}
+                ${recipe.images && recipe.images.length > 0 ? `
+                    <div class="recipe-images-preview">
+                        ${recipe.images.slice(0, 3).map(img => `<img src="${getImagePath(img)}" class="recipe-image-preview" data-src="${getImagePath(img)}">`).join('')}
+                        ${recipe.images.length > 3 ? `<span style="font-size:11px; color:#666;">+${recipe.images.length - 3} more</span>` : ''}
+                    </div>
+                ` : ''}
                 <div class="recipe-actions">
                     <button class="retro-button edit-recipe" data-id="${recipe.id}" style="padding: 2px 8px;">✏️ Edit</button>
                     <button class="retro-button delete-recipe" data-id="${recipe.id}" style="padding: 2px 8px;">🗑️ Delete</button>
@@ -604,7 +673,11 @@
             <div class="view-title">${escapeHtml(recipe.title)}</div>
             <div class="view-category">📁 ${escapeHtml(recipe.category)}</div>
             ${recipe.description ? `<div style="font-style:italic; margin-bottom:15px;">${escapeHtml(recipe.description)}</div>` : ''}
-            ${recipe.image ? `<img src="${getImagePath(recipe.image)}" class="view-image" data-src="${getImagePath(recipe.image)}">` : ''}
+            ${recipe.images && recipe.images.length > 0 ? `
+                <div class="view-images">
+                    ${recipe.images.map(img => `<img src="${getImagePath(img)}" class="view-image" data-src="${getImagePath(img)}">`).join('')}
+                </div>
+            ` : ''}
             <div class="view-section-title">🛒 Ingredients</div>
             <div class="view-ingredients">${escapeHtml(recipe.ingredients || '').replace(/\n/g, '<br>')}</div>
             <div class="view-section-title">📝 Instructions</div>
@@ -618,6 +691,52 @@
         });
     }
 
+    function renderImagesList() {
+        const container = document.getElementById('imagesListContainer');
+        if (!container) return;
+        
+        if (currentImages.length === 0) {
+            container.innerHTML = '<div style="color:#999; text-align:center; padding:20px;">No images added yet. Click "Add Image URL" to add photos.</div>';
+            return;
+        }
+        
+        container.innerHTML = currentImages.map((img, idx) => `
+            <div class="image-item">
+                <img src="${getImagePath(img)}" data-src="${getImagePath(img)}" class="preview-thumb">
+                <input type="text" value="${escapeHtml(img)}" data-idx="${idx}" class="image-path-input" style="width: 60%;">
+                <button class="remove-image-btn" data-idx="${idx}">✗ Remove</button>
+            </div>
+        `).join('');
+        
+        document.querySelectorAll('.image-item .preview-thumb').forEach(thumb => {
+            thumb.addEventListener('click', () => openLightbox(thumb.dataset.src));
+        });
+        
+        document.querySelectorAll('.image-path-input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const idx = parseInt(input.dataset.idx);
+                currentImages[idx] = input.value;
+                renderImagesList();
+            });
+        });
+        
+        document.querySelectorAll('.remove-image-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.dataset.idx);
+                currentImages.splice(idx, 1);
+                renderImagesList();
+            });
+        });
+    }
+
+    function addImageUrl() {
+        const url = prompt('Enter image path (e.g., images/photo.jpg or full URL):', 'images/');
+        if (url && url.trim()) {
+            currentImages.push(url.trim());
+            renderImagesList();
+        }
+    }
+
     function openNewRecipeModal() {
         editingRecipeId = null;
         document.getElementById('modalTitle').innerText = 'New Recipe';
@@ -626,7 +745,8 @@
         document.getElementById('recipeDescription').value = '';
         document.getElementById('recipeIngredients').value = '';
         document.getElementById('recipeInstructions').value = '';
-        document.getElementById('recipeImage').value = '';
+        currentImages = [];
+        renderImagesList();
         document.getElementById('recipeModal').style.display = 'flex';
     }
 
@@ -640,7 +760,8 @@
         document.getElementById('recipeDescription').value = recipe.description || '';
         document.getElementById('recipeIngredients').value = recipe.ingredients || '';
         document.getElementById('recipeInstructions').value = recipe.instructions || '';
-        document.getElementById('recipeImage').value = recipe.image || '';
+        currentImages = [...(recipe.images || [])];
+        renderImagesList();
         document.getElementById('recipeModal').style.display = 'flex';
     }
 
@@ -657,7 +778,6 @@
         const description = document.getElementById('recipeDescription').value.trim();
         const ingredients = document.getElementById('recipeIngredients').value.trim();
         const instructions = document.getElementById('recipeInstructions').value.trim();
-        const image = document.getElementById('recipeImage').value.trim();
 
         if (!title) {
             alert('Please enter a recipe name');
@@ -680,7 +800,7 @@
                 recipes[index].description = description;
                 recipes[index].ingredients = ingredients;
                 recipes[index].instructions = instructions;
-                recipes[index].image = image;
+                recipes[index].images = [...currentImages];
             }
         } else {
             recipes.push({
@@ -690,7 +810,7 @@
                 description: description,
                 ingredients: ingredients,
                 instructions: instructions,
-                image: image
+                images: [...currentImages]
             });
         }
         saveRecipes();
@@ -793,6 +913,7 @@
     };
     document.getElementById('clearSearchBtn').onclick = clearSearch;
     document.getElementById('lightbox').onclick = () => document.getElementById('lightbox').style.display = 'none';
+    document.getElementById('addImageBtn').onclick = addImageUrl;
     
     makeDraggable('recipeModal', 'modalTitleBar');
     makeDraggable('helpModal', 'closeHelpModal');
